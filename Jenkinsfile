@@ -4,11 +4,11 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                // Capture build output into build.log
-                sh '''
-                    echo "Building the application..." | tee build.log
-                    # Add your actual build commands here
-                    # Example: mvn clean install | tee -a build.log
+                // On Windows, use bat instead of sh
+                bat '''
+                    echo Building the application... > build.log
+                    REM Add your actual build commands here
+                    REM Example: mvn clean install >> build.log
                 '''
             }
         }
@@ -24,31 +24,36 @@ pipeline {
             // e.g., collect logs, notify on failure
         }
         always {
-            echo 'Always run cleanup steps...'
-            cleanWs()
-
+            echo 'Sending logs to FastAPI receiver...'
             script {
-                // Read captured logs from build.log
-                def logContent = readFile('build.log')
+                // Ensure build.log exists before reading
+                if (fileExists('build.log')) {
+                    def logContent = readFile('build.log')
 
-                // Build JSON payload
-                def payload = [
-                    buildNumber: env.BUILD_NUMBER,
-                    jobName: env.JOB_NAME,
-                    status: currentBuild.currentResult,
-                    consoleLog: logContent
-                ]
-                def jsonPayload = groovy.json.JsonOutput.toJson(payload)
+                    def payload = [
+                        buildNumber: env.BUILD_NUMBER,
+                        jobName: env.JOB_NAME,
+                        status: currentBuild.currentResult,
+                        consoleLog: logContent,
+                        buildUrl: env.BUILD_URL,
+                        gitCommit: env.GIT_COMMIT ?: "N/A"
+                    ]
+                    def jsonPayload = groovy.json.JsonOutput.toJson(payload)
 
-                // Send HTTP POST to FastAPI receiver
-                def response = httpRequest(
-                    httpMode: 'POST',
-                    contentType: 'APPLICATION_JSON',
-                    requestBody: jsonPayload,
-                    url: 'http://localhost:8000/jenkins-webhook'
-                )
-                echo "Webhook response: ${response.status}"
+                    def response = httpRequest(
+                        httpMode: 'POST',
+                        contentType: 'APPLICATION_JSON',
+                        requestBody: jsonPayload,
+                        url: 'http://localhost:8000/jenkins-webhook'
+                    )
+                    echo "Webhook response: ${response.status}"
+                } else {
+                    echo "No build.log file found — skipping webhook."
+                }
             }
+
+            // Cleanup AFTER sending logs
+            cleanWs()
         }
     }
 }
