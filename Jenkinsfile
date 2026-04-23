@@ -11,9 +11,15 @@ pipeline {
         }
         stage('Test') {
             steps {
-                echo 'Running tests...'
-                sh 'npm install'
-                sh 'npm test'
+                script {
+                    if (isUnix()) {
+                        sh 'npm install'
+                        sh 'npm test'
+                    } else {
+                        bat 'npm install'
+                        bat 'npm test'
+                    }
+                }
             }
         }
         // ...existing code...
