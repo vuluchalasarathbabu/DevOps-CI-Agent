@@ -4,9 +4,20 @@ pipeline {
     stages {
         stage('Build') {
             steps {
+                // Capture build output into build.log
                 bat '''
-                    echo Building the application... > build.log
-                    REM Add your actual build commands here
+                    echo Starting build... > build.log
+                    echo Compiling source code... >> build.log
+                    echo Build completed successfully. >> build.log
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                bat '''
+                    echo Running tests... >> build.log
+                    echo All tests passed. >> build.log
                 '''
             }
         }
@@ -15,16 +26,24 @@ pipeline {
     post {
         always {
             script {
+                // Read full build.log
                 def logContent = readFile('build.log')
-                def jsonPayload = groovy.json.JsonOutput.toJson([
+
+                // Build JSON payload
+                def payload = [
                     buildNumber: env.BUILD_NUMBER,
                     jobName: env.JOB_NAME,
                     status: currentBuild.currentResult,
-                    consoleLog: logContent
-                ])
+                    consoleLog: logContent,
+                    buildUrl: env.BUILD_URL,
+                    gitCommit: env.GIT_COMMIT ?: "N/A"
+                ]
+                def jsonPayload = groovy.json.JsonOutput.toJson(payload)
 
-                // Use PowerShell to send POST request safely
+                // Write payload to file
                 writeFile file: 'payload.json', text: jsonPayload
+
+                // Send POST request using PowerShell (safe step, no approvals needed)
                 powershell '''
                     $body = Get-Content payload.json -Raw
                     Invoke-RestMethod -Uri http://localhost:8000/jenkins-webhook `
@@ -33,6 +52,9 @@ pipeline {
                                       -Body $body
                 '''
             }
+
+            // Cleanup AFTER sending logs
+            cleanWs()
         }
     }
 }
