@@ -1,7 +1,3 @@
-import groovy.json.JsonOutput
-import java.net.URL
-import java.net.HttpURLConnection
-
 pipeline {
     agent any
 
@@ -10,6 +6,7 @@ pipeline {
             steps {
                 bat '''
                     echo Building the application... > build.log
+                    REM Add your actual build commands here
                 '''
             }
         }
@@ -19,25 +16,22 @@ pipeline {
         always {
             script {
                 def logContent = readFile('build.log')
-                def payload = [
+                def jsonPayload = groovy.json.JsonOutput.toJson([
                     buildNumber: env.BUILD_NUMBER,
                     jobName: env.JOB_NAME,
                     status: currentBuild.currentResult,
                     consoleLog: logContent
-                ]
-                def jsonPayload = JsonOutput.toJson(payload)
+                ])
 
-                // Send POST request without plugin or approval
-                def url = new URL("http://localhost:8000/jenkins-webhook")
-                def conn = (HttpURLConnection) url.openConnection()
-                conn.setRequestMethod("POST")
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.doOutput = true
-                conn.outputStream.write(jsonPayload.getBytes("UTF-8"))
-                conn.outputStream.flush()
-                conn.outputStream.close()
-
-                echo "Webhook response code: ${conn.responseCode}"
+                // Use PowerShell to send POST request safely
+                writeFile file: 'payload.json', text: jsonPayload
+                powershell '''
+                    $body = Get-Content payload.json -Raw
+                    Invoke-RestMethod -Uri http://localhost:8000/jenkins-webhook `
+                                      -Method Post `
+                                      -ContentType "application/json" `
+                                      -Body $body
+                '''
             }
         }
     }
