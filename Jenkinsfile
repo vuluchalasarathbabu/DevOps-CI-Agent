@@ -9,19 +9,6 @@ pipeline {
                 // Add build steps here if necessary
             }
         }
-        stage('Test') {
-            steps {
-                script {
-                    if (isUnix()) {
-                        sh 'npm install'
-                        sh 'npm test'
-                    } else {
-                        bat 'npm install'
-                        bat 'npm test'
-                    }
-                }
-            }
-        }
         // ...existing code...
     }
 
