@@ -4,25 +4,43 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                echo 'Building the application...'
-                // Add build steps here if necessary
+                // Capture build output into build.log
+                sh '''
+                    echo "Building the application..." | tee build.log
+                    # Add your actual build commands here
+                    # Example: mvn clean install | tee -a build.log
+                '''
             }
         }
     }
 
     post {
+        success {
+            echo 'Pipeline succeeded — running post-success steps...'
+            // e.g., notify success, archive artifacts
+        }
+        failure {
+            echo 'Pipeline failed — running post-failure steps...'
+            // e.g., collect logs, notify on failure
+        }
         always {
-            echo 'Sending logs to FastAPI receiver...'
+            echo 'Always run cleanup steps...'
+            cleanWs()
+
             script {
+                // Read captured logs from build.log
+                def logContent = readFile('build.log')
+
+                // Build JSON payload
                 def payload = [
                     buildNumber: env.BUILD_NUMBER,
                     jobName: env.JOB_NAME,
                     status: currentBuild.currentResult,
-                    consoleLog: currentBuild.rawBuild.getLog(1000) // last 1000 lines
+                    consoleLog: logContent
                 ]
                 def jsonPayload = groovy.json.JsonOutput.toJson(payload)
 
-                // Send HTTP POST to FastAPI
+                // Send HTTP POST to FastAPI receiver
                 def response = httpRequest(
                     httpMode: 'POST',
                     contentType: 'APPLICATION_JSON',
@@ -34,5 +52,3 @@ pipeline {
         }
     }
 }
-
-
