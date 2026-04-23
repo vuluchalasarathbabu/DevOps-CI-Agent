@@ -2,32 +2,35 @@ pipeline {
     agent any
 
     stages {
-        // ...existing code...
         stage('Build') {
             steps {
                 echo 'Building the application...'
                 // Add build steps here if necessary
             }
         }
-        // ...existing code...
     }
 
-    // added post section to run steps after pipeline completion
     post {
-        success {
-            echo 'Pipeline succeeded — running post-success steps...'
-            // e.g., notify success, archive artifacts
-            // sh 'scripts/success.sh'
-        }
-        failure {
-            echo 'Pipeline failed — running post-failure steps...'
-            // e.g., collect logs, notify on failure
-            // sh 'scripts/failure.sh'
-        }
         always {
-            echo 'Always run cleanup steps...'
-            // e.g., cleanup workspace
-            cleanWs()
+            echo 'Sending logs to FastAPI receiver...'
+            script {
+                def payload = [
+                    buildNumber: env.BUILD_NUMBER,
+                    jobName: env.JOB_NAME,
+                    status: currentBuild.currentResult,
+                    consoleLog: currentBuild.rawBuild.getLog(1000) // last 1000 lines
+                ]
+                def jsonPayload = groovy.json.JsonOutput.toJson(payload)
+
+                // Send HTTP POST to FastAPI
+                def response = httpRequest(
+                    httpMode: 'POST',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: jsonPayload,
+                    url: 'http://<your-machine-ip>:8000/jenkins-webhook'
+                )
+                echo "Webhook response: ${response.status}"
+            }
         }
     }
 }
