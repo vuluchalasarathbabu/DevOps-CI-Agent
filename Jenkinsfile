@@ -27,10 +27,12 @@ pipeline {
                     httpMode: 'POST',
                     contentType: 'APPLICATION_JSON',
                     requestBody: jsonPayload,
-                    url: 'http://<your-machine-ip>:8000/jenkins-webhook'
+                    url: 'http://localhost:8000/jenkins-webhook'
                 )
                 echo "Webhook response: ${response.status}"
             }
         }
     }
 }
+
+
