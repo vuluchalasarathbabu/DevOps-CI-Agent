@@ -16,12 +16,6 @@ pipeline {
                 sh 'npm test'
             }
         }
-        stage('Deploy') {
-            steps {
-                echo 'Deploying the application...'
-                // Add deployment steps here if necessary
-            }
-        }
         // ...existing code...
     }
 
