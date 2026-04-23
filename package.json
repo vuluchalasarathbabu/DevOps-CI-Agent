@@ -1,0 +1,16 @@
+{
+  "name": "jenkins-hello-world",
+  "version": "1.0.0",
+  "description": "A simple Hello World application for Jenkins CI/CD demonstration.",
+  "main": "src/app.js",
+  "scripts": {
+    "test": "jest",
+    "start": "node src/app.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^27.0.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
