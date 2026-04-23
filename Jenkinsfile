@@ -27,7 +27,7 @@ pipeline {
                 ]
                 def jsonPayload = JsonOutput.toJson(payload)
 
-                // Send POST request without plugin
+                // Send POST request without plugin or approval
                 def url = new URL("http://localhost:8000/jenkins-webhook")
                 def conn = (HttpURLConnection) url.openConnection()
                 conn.setRequestMethod("POST")
